@@ -1,98 +1,134 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import CurrentWeather from "@/components/CurrentWeather";
+import { ForecastList } from "@/components/ForecastList";
+import SearchBar from "@/components/SearchBar";
+import { useWeather } from "@/hooks/useWeather";
+import { getBackgroundImage } from "@/utils/weatherUtils";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import {
+  ActivityIndicator,
+  ImageBackground,
+  Platform,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+export default function Index() {
+  const {
+    loading,
+    errorMsg,
+    weather,
+    forecast,
+    aqi,
+    getLocationWeather,
+    searchCity,
+  } = useWeather();
 
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
+  if (loading) {
     return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
+      <View style={styles.centerContainer}>
+        <ActivityIndicator size="large" color="#fff" />
+      </View>
     );
   }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
-  return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
+
+  if (errorMsg || !weather) {
+    return (
+      <View style={styles.centerContainer}>
+        <MaterialCommunityIcons
+          name="alert-circle-outline"
+          size={48}
+          color="#FF6B6B"
+        />
+        <Text style={styles.errorText}>
+          {errorMsg || "Something went wrong"}
+        </Text>
+        <TouchableOpacity
+          onPress={getLocationWeather}
+          style={styles.retryButton}
+        >
+          <Text style={styles.retryText}>Try Again</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  const bgImage = getBackgroundImage(
+    weather.weather[0].main,
+    weather.weather[0].icon,
   );
-}
 
-export default function HomeScreen() {
   return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
-
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
-
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
+    <ImageBackground source={bgImage} style={styles.bgImage} resizeMode="cover">
+      <View style={styles.overlay}>
+        <SafeAreaView style={styles.container}>
+          <StatusBar
+            barStyle={"light-content"}
+            backgroundColor={"transparent"}
+            translucent
           />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
+          <SearchBar onSearch={searchCity} />
 
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
-    </ThemedView>
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+          >
+            <CurrentWeather weather={weather} aqi={aqi} />
+            <ForecastList data={forecast} />
+          </ScrollView>
+        </SafeAreaView>
+      </View>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
+  bgImage: {
+    flex: 1,
+    width: "100%",
+    height: "100%",
+  },
+  overlay: {
+    flex: 1,
+  },
   container: {
     flex: 1,
-    justifyContent: 'center',
-    flexDirection: 'row',
+    paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
   },
-  safeArea: {
+  scrollView: {
     flex: 1,
-    paddingHorizontal: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
   },
-  heroSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 24,
+  },
+  centerContainer: {
     flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
+    backgroundColor: "#111",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
   },
-  title: {
-    textAlign: 'center',
+  errorText: {
+    color: "#fff",
+    fontSize: 16,
+    marginVertical: 10,
+    textAlign: "center",
   },
-  code: {
-    textTransform: 'uppercase',
+  retryButton: {
+    marginTop: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    backgroundColor: "#FF6B6B",
+    borderRadius: 20,
   },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
+  retryText: {
+    color: "#fff",
+    fontWeight: "bold",
   },
 });
